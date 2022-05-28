@@ -1,0 +1,65 @@
+#!/usr/bin/python3
+import argparse
+from PIL import Image
+import os
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-W', '--width', type=int, help='Output img(s) width. Default size 128px')
+    parser.add_argument('-H', '--height', type=int, help='Output img(s) heigt. Default size depends on [-W]')
+    parser.add_argument('-c', '--count', action='store_true', help='Output dir img(s) counter eg. 1.jpg, 2.jpg etc.')
+    parser.add_argument('input', help='Input img/dir name')
+    parser.add_argument('output', help='Output img/dir name')
+    return parser.parse_args()
+
+def prepare_or_exit(output):
+    if os.path.exists(output):
+        choose = input('Output path exists. Do you want to overwrite it? [y/n]: ')
+        if choose == 'y':
+            if os.path.isfile(output):
+                os.remove(output)
+            elif os.path.isdir(output):
+                for filename in os.listdir(output):
+                    os.remove(output+'/'+filename)
+                os.rmdir(output)
+        else:
+            exit()
+
+def resize_file(width, height, input, output):
+    input_img = Image.open(input)
+    if width and height:
+        output_img = input_img.resize((width, height))
+    elif width:
+        output_img = input_img.resize((width, int(input_img.height*width/input_img.width)))
+    elif height:
+        output_img = input_img.resize((int(input_img.width*height/input_img.height), height))
+    else:
+        output_img = input_img.resize((128, int(input_img.height*128/input_img.width)))
+    output_img.save(output)
+
+def resize_dir(width, height, input, output, count):
+    os.mkdir(output)
+    counter = 1 if count else None
+    if not counter:
+        for filename in os.listdir(input):
+            resize_file(width, height, input+'/'+filename, output+'/'+filename)
+    else:
+        for filename in os.listdir(input):
+            extension = os.path.splitext(filename)[1]
+            resize_file(width, height, input+'/'+filename, output+'/'+str(counter)+extension)
+            counter+=1
+
+def main():
+
+    args = parse_args()
+    prepare_or_exit(args.output)
+
+    if os.path.isfile(args.input):
+        resize_file(args.width, args.height, args.input, args.output)
+    elif os.path.isdir(args.input):
+        resize_dir(args.width, args.height, args.input, args.output, args.count)
+    else:
+        print('No such input file or directory.')
+
+if __name__ == '__main__':
+    main()
